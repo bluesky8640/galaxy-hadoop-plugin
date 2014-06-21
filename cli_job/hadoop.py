@@ -48,7 +48,20 @@ echo $? > %s
 cat %s
 """
 
-driver_template = '%s/bin/hadoop jar %s -mapper %s -reducer "%s" -input %s -output %s -file %s -numReduceTasks 1'
+driver_template2 = '%s/bin/hadoop fs -rmr %s && \
+%s/bin/hadoop fs -rmr %s && \
+%s/bin/hadoop fs -mkdir %s && \
+%s/bin/hadoop fs -put %s %s && \
+%s/bin/hadoop jar %s -mapper %s -reducer %s -input %s -output %s -file %s -numReduceTasks 1 && \
+rm %s && \
+%s/bin/hadoop fs -get %s %s'
+
+
+driver_template = '%s/bin/hadoop fs -mkdir %s && \
+%s/bin/hadoop fs -put %s %s && \
+%s/bin/hadoop jar %s -mapper %s -reducer %s -input %s -output %s -file %s -numReduceTasks 1 && \
+rm %s && \
+%s/bin/hadoop fs -get %s %s'
 
 class Hadoop(BaseJobExec):
     def __init__(self, **params):
@@ -69,8 +82,10 @@ class Hadoop(BaseJobExec):
         mapper_output_fname = job_wrapper.get_output_fnames()[0].real_path 
         # Get id tag
         id_tag = job_wrapper.get_id_tag()
+
         # Prepare hdfs input files
-        self.__prepare_hdfs_input_files(mapper_input_fname, id_tag)
+        # self.__prepare_hdfs_input_files(mapper_input_fname, id_tag)
+
         # Fill mapper template
         return mapper_template % (self.galaxy_home + "/database/job_working_directory/000",
                                   self.galaxy_home + "/database/job_working_directory/000" + "/" + id_tag,
@@ -89,12 +104,52 @@ class Hadoop(BaseJobExec):
         # Get mapper file name
         mapper_file_paths = script_file.split("/")
         mapper_short_name = mapper_file_paths[len(mapper_file_paths) - 1]
+        # Get mapper input/output file name
+        mapper_input_fname = job_wrapper.get_input_fnames()[0]
+        mapper_output_fname = job_wrapper.get_output_fnames()[0].real_path 
+        # Get hdfs output file name, there is only one reducer
+        hdfs_output_fname = self.hdfs_output + "/" + id_tag + '/part-00000'
         # Get reducer command
         # reducer_output_fname = os.path.abspath(job_wrapper.working_directory) + "/" + "reducer_output.dat"
         # reducer_command = reducer_template % (reducer_output_fname, reducer_output_fname)
+
         print "\nHadoop commands:"
-        print  driver_template % (self.hadoop_home, self.streaming_jar, mapper_short_name, '/bin/cat', self.hdfs_input + '/' + id_tag, self.hdfs_output + '/' + id_tag, script_file)
-        return driver_template % (self.hadoop_home, self.streaming_jar, mapper_short_name, '/bin/cat', self.hdfs_input + '/' + id_tag, self.hdfs_output + '/' + id_tag, script_file)
+        print driver_template2 % (self.hadoop_home, 
+                                  self.hdfs_output + "/" + id_tag, 
+                                  self.hadoop_home, 
+                                  self.hdfs_input + "/" + id_tag, 
+                                  self.hadoop_home, 
+                                  self.hdfs_input + "/" + id_tag, 
+                                  self.hadoop_home, 
+                                  mapper_input_fname,
+                                  self.hdfs_input + "/" + id_tag, 
+                                  self.hadoop_home, 
+                                  self.streaming_jar, 
+                                  mapper_short_name, 
+                                  '/bin/cat', 
+                                  self.hdfs_input + '/' + id_tag, 
+                                  self.hdfs_output + '/' + id_tag, 
+                                  script_file,
+                                  mapper_output_fname,
+                                  self.hadoop_home,
+                                  hdfs_output_fname,
+                                  mapper_output_fname)
+        return driver_template % (self.hadoop_home, 
+                                  self.hdfs_input + "/" + id_tag, 
+                                  self.hadoop_home, 
+                                  mapper_input_fname,
+                                  self.hdfs_input + "/" + id_tag, 
+                                  self.hadoop_home, 
+                                  self.streaming_jar, 
+                                  mapper_short_name, 
+                                  '/bin/cat', 
+                                  self.hdfs_input + '/' + id_tag, 
+                                  self.hdfs_output + '/' + id_tag, 
+                                  script_file,
+                                  mapper_output_fname,
+                                  self.hadoop_home,
+                                  hdfs_output_fname,
+                                  mapper_output_fname)
 
     def parse_job_info(self, job_info):
         index = job_info.index("job_")

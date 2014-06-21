@@ -207,10 +207,10 @@ class ShellJobRunner( AsynchronousJobRunner ):
             else:
                 if state != old_state:
                     # Updated by jinchao: handle output data completion
-                    if state == model.Job.states.OK:
-                        shell_params, job_params = self.parse_destination_params(ajs.job_destination.params)
-                        shell, job_interface = self.get_cli_plugins(shell_params, job_params)
-                        job_interface.handle_output_data(ajs.job_wrapper)
+                    # if state == model.Job.states.OK:
+                    #    shell_params, job_params = self.parse_destination_params(ajs.job_destination.params)
+                    #    shell, job_interface = self.get_cli_plugins(shell_params, job_params)
+                    #    job_interface.handle_output_data(ajs.job_wrapper)
 
                     log.debug("(%s/%s) state change: %s" % ( id_tag, external_job_id, state ) )
                     ajs.job_wrapper.change_state( state )
